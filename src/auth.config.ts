@@ -15,6 +15,14 @@ export default {
     signIn: "/login",
   },
   callbacks: {
+    jwt({ token, user }) {
+      if (user) token.id = user.id;
+      return token;
+    },
+    session({ session, token }) {
+      session.user.id = (token.id ?? token.sub) as string;
+      return session;
+    },
     authorized({ auth, request: { nextUrl } }) {
       const isLoggedIn = !!auth?.user;
       const isOnProtected = nextUrl.pathname.startsWith("/dashboard") || nextUrl.pathname.startsWith("/expenses");
