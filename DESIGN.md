@@ -89,10 +89,63 @@ npm run dev          # http://localhost:3000
 Google OAuth callback (dev): `http://localhost:3000/api/auth/callback/google`
 
 ## 9. Deploy (Vercel + Turso)
-1. Buat database Turso, ambil `DATABASE_URL` (libsql).
-2. Set env `DATABASE_URL`, `AUTH_SECRET`, `AUTH_GOOGLE_*` di Vercel.
-3. Build command jalankan `prisma migrate deploy`.
-4. Pastikan Google OAuth authorized redirect ke `https://<domain>/api/auth/callback/google`.
+
+### 9.1 Setup Turso (production DB)
+```bash
+# Install CLI (already done)
+npm install -g turso
+
+# Login ke akun Turso (buka browser)
+turso auth login
+
+# Buat database
+turso db create t-rex-prod
+
+# Dapatkan URL database
+turso db show t-rex-prod --url
+# Output: libsql://t-rex-prod-<org>.turso.io
+
+# Generate token auth (tak terbatas)
+turso db create-token t-rex-prod --expiration none
+# Output: Token: <token-string>
+
+# Set DATABASE_URL di Vercel:
+# libsql://t-rex-prod-<org>.turso.io?authToken=<token>
+```
+
+### 9.2 Deploy ke Vercel
+1. Push repo ke GitHub:
+   ```bash
+   git add .
+   git commit -m "Initial: T-Rex expense tracker"
+   git remote add origin https://github.com/<user>/t-rex.git
+   git push -u origin main
+   ```
+2. Buka [vercel.com](https://vercel.com) → Import GitHub repo.
+3. Framework preset: **Next.js** (otomatis terdeteksi).
+4. **Build Command:**
+   ```
+   npx prisma generate && npx prisma db push && next build
+   ```
+5. **Environment Variables** di Vercel dashboard:
+   ```
+   AUTH_SECRET=...
+   AUTH_GOOGLE_ID=...
+   AUTH_GOOGLE_SECRET=...
+   AUTH_TRUST_HOST=true
+   DATABASE_URL=libsql://t-rex-prod-<org>.turso.io?authToken=<token>
+   ```
+
+### 9.3 Update Google OAuth redirect URI
+Di Google Cloud Console → Credentials → OAuth client → Authorized redirect URIs, tambah:
+```
+https://<vercel-project>.vercel.app/api/auth/callback/google
+```
+
+### 9.4 Verifikasi
+- Buka URL Vercel → harus redirect ke `/login`.
+- Klik "Masuk dengan Google" → login → masuk `/dashboard`.
+- Test input, edit, hapus pengeluaran.
 
 ## 10. Prinsip
 - Mobile-first: bottom nav, tombol besar, input numeric (`inputMode="decimal"`).
